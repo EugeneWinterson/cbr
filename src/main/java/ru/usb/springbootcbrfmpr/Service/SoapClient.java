@@ -5,18 +5,20 @@ import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ws.client.core.support.WebServiceGatewaySupport;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import ru.usb.dailyinfo.wsdl.GetCursOnDateResponse;
 import ru.usb.dailyinfo.wsdl.GetLatestDateTimeResponse;
+import ru.usb.springbootcbrfmpr.Model.ValuteData;
 import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
-import javax.xml.bind.annotation.XmlSchema;
 import javax.xml.soap.MessageFactory;
 import javax.xml.soap.SOAPException;
 import javax.xml.soap.SOAPMessage;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 
 @Service
 public class SoapClient extends WebServiceGatewaySupport {
@@ -31,13 +33,13 @@ public class SoapClient extends WebServiceGatewaySupport {
         setUnmarshaller(marshaller);
     }
 
-    public String sendSoap(String xml, Class soapMethod) {
+    public String sendSoap(String xml, Class<?> soapMethod) {
         try {
             String result = "";
 
-            SOAPMessage soapMessage = prepareSoap(xml);
             JAXBContext jaxbContext = JAXBContext.newInstance(soapMethod);
             Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+            SOAPMessage soapMessage = prepareSoap(xml);
             if (soapMethod == GetLatestDateTimeResponse.class) {
                 GetLatestDateTimeResponse response = (GetLatestDateTimeResponse) unmarshaller
                         .unmarshal(soapMessage.getSOAPBody().getFirstChild());
@@ -47,13 +49,26 @@ public class SoapClient extends WebServiceGatewaySupport {
                 GetCursOnDateResponse response = (GetCursOnDateResponse) unmarshaller
                         .unmarshal(soapMessage.getSOAPBody().getFirstChild());
                 Object rows = response.getGetCursOnDateResult().getAny();
-
-                StringWriter stringWriter = new StringWriter();
-                Marshaller marshaller = jaxbContext.createMarshaller();
-                marshaller.marshal(response, stringWriter);
-                String xmlString = stringWriter.toString();
-                result = xmlString;
-               // log.info("response: " + data.getGetCursOnDateResult().getAny().toString());
+                NodeList nodeList = (NodeList) rows;
+                Node valuteCursOnDate = nodeList.item(0).getFirstChild();
+                int count = Integer.parseInt(nodeList.item(0).getLastChild().getAttributes().item(1).getNodeValue());
+                ArrayList<ValuteData> arrayList = new ArrayList<>();
+                for(int i =0; i <= count; i++) {
+                    var vName = valuteCursOnDate.getFirstChild().getFirstChild().getNodeValue().trim();
+                    var vNom = valuteCursOnDate.getFirstChild().getNextSibling().getFirstChild().getNodeValue().trim();
+                    var vCurs = valuteCursOnDate.getFirstChild().getNextSibling().getNextSibling().getFirstChild().getNodeValue().trim();
+                    var vCode = valuteCursOnDate.getFirstChild().getNextSibling().getNextSibling().getNextSibling().getFirstChild().getNodeValue().trim();
+                    var vChCode = valuteCursOnDate.getFirstChild().getNextSibling().getNextSibling().getNextSibling().getNextSibling().getFirstChild().getNodeValue().trim();
+                    valuteCursOnDate = valuteCursOnDate.getNextSibling();
+                    arrayList.add(new ValuteData(vName, vNom, vCurs , vCode, vChCode));
+                }
+                System.out.println(arrayList);
+                var item = arrayList.size();
+                for(int i = 0; i < arrayList.size(); i++) {
+                    //prepare statement
+                    //add batch
+                }
+                //execute batch
             }
             return result;
         } catch (Exception e) {
