@@ -4,8 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import ru.usb.dailyinfo.wsdl.GetCursOnDateResponse;
-import ru.usb.dailyinfo.wsdl.GetLatestDateTimeResponse;
+import ru.usb.dailyinfos.wsdl.GetCursOnDateResponse;
+import ru.usb.dailyinfos.wsdl.GetLatestDateTimeResponse;
 import ru.usb.springbootcbrfmpr.Config.Config;
 import ru.usb.springbootcbrfmpr.Service.SoapClient;
 

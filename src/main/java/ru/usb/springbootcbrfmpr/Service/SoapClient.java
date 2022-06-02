@@ -6,12 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ws.client.core.support.WebServiceGatewaySupport;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import ru.usb.dailyinfo.wsdl.GetCursOnDateResponse;
-import ru.usb.dailyinfo.wsdl.GetLatestDateTimeResponse;
+import ru.usb.dailyinfos.wsdl.GetLatestDateTimeResponse;
 import ru.usb.springbootcbrfmpr.Model.ValuteData;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Unmarshaller;
 import javax.xml.soap.MessageFactory;
 import javax.xml.soap.SOAPException;
 import javax.xml.soap.SOAPMessage;
@@ -23,7 +19,7 @@ import java.util.ArrayList;
 @Service
 public class SoapClient extends WebServiceGatewaySupport {
 
-    String URL = "http://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx";
+    String url = "http://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx";
     private static final Logger log = LoggerFactory.getLogger(SoapClient.class);
 
     public SoapClient() {
@@ -37,33 +33,27 @@ public class SoapClient extends WebServiceGatewaySupport {
         try {
             String result = "";
 
-            JAXBContext jaxbContext = JAXBContext.newInstance(soapMethod);
-            Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
             SOAPMessage soapMessage = prepareSoap(xml);
             if (soapMethod == GetLatestDateTimeResponse.class) {
-                GetLatestDateTimeResponse response = (GetLatestDateTimeResponse) unmarshaller
-                        .unmarshal(soapMessage.getSOAPBody().getFirstChild());
-                        log.info("response: " + response.getGetLatestDateTimeResult());
-                result = response.getGetLatestDateTimeResult().toString();
+                var response = soapMessage.getSOAPBody().getFirstChild().getTextContent();
+                log.info("response: {}",  response);
+                result = response;
             } else {
-                GetCursOnDateResponse response = (GetCursOnDateResponse) unmarshaller
-                        .unmarshal(soapMessage.getSOAPBody().getFirstChild());
-                Object rows = response.getGetCursOnDateResult().getAny();
-                NodeList nodeList = (NodeList) rows;
-                Node valuteCursOnDate = nodeList.item(0).getFirstChild();
-                int count = Integer.parseInt(nodeList.item(0).getLastChild().getAttributes().item(1).getNodeValue());
+                Node valuteCursOnDate = soapMessage.getSOAPBody().extractContentAsDocument()
+                        .getFirstChild().getFirstChild().getFirstChild().getNextSibling().getFirstChild();
+                Node valuteData = valuteCursOnDate.getFirstChild();
+                var count = Integer.parseInt(valuteCursOnDate.getLastChild().getAttributes().item(1).getNodeValue());
                 ArrayList<ValuteData> arrayList = new ArrayList<>();
                 for(int i =0; i <= count; i++) {
-                    var vName = valuteCursOnDate.getFirstChild().getFirstChild().getNodeValue().trim();
-                    var vNom = valuteCursOnDate.getFirstChild().getNextSibling().getFirstChild().getNodeValue().trim();
-                    var vCurs = valuteCursOnDate.getFirstChild().getNextSibling().getNextSibling().getFirstChild().getNodeValue().trim();
-                    var vCode = valuteCursOnDate.getFirstChild().getNextSibling().getNextSibling().getNextSibling().getFirstChild().getNodeValue().trim();
-                    var vChCode = valuteCursOnDate.getFirstChild().getNextSibling().getNextSibling().getNextSibling().getNextSibling().getFirstChild().getNodeValue().trim();
-                    valuteCursOnDate = valuteCursOnDate.getNextSibling();
+                    var vName = valuteData.getFirstChild().getFirstChild().getNodeValue().trim();
+                    var vNom = valuteData.getFirstChild().getNextSibling().getFirstChild().getNodeValue().trim();
+                    var vCurs = valuteData.getFirstChild().getNextSibling().getNextSibling().getFirstChild().getNodeValue().trim();
+                    var vCode = valuteData.getFirstChild().getNextSibling().getNextSibling().getNextSibling().getFirstChild().getNodeValue().trim();
+                    var vChCode = valuteData.getFirstChild().getNextSibling().getNextSibling().getNextSibling().getNextSibling().getFirstChild().getNodeValue().trim();
+                    valuteData = valuteData.getNextSibling();
                     arrayList.add(new ValuteData(vName, vNom, vCurs , vCode, vChCode));
                 }
-                System.out.println(arrayList);
-                var item = arrayList.size();
+
                 for(int i = 0; i < arrayList.size(); i++) {
                     //prepare statement
                     //add batch
